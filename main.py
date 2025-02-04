@@ -1,16 +1,14 @@
 from collections import Counter
-from flask import Flask, render_template
-from difflib import SequenceMatcher
 from pprint import pprint
+from flask import Flask, render_template, request
+from difflib import SequenceMatcher
 
 app = Flask(__name__)
 
-# ฟังก์ชันตรวจสอบความคล้ายคลึง
 def is_similar(text1, text2, threshold=0.8):
     ratio = SequenceMatcher(None, text1, text2).ratio()
     return ratio >= threshold
 
-# รวมกลุ่มประโยคที่คล้ายกัน
 def group_similar_sentences(sentences, threshold=0.8):
     grouped = []
     for sentence in sentences:
@@ -24,7 +22,7 @@ def group_similar_sentences(sentences, threshold=0.8):
             grouped.append([sentence])
     return grouped
 
-sentences_list = ['วันนี้อากาศดีมาก',
+default_sentences = ['วันนี้อากาศดีมาก',
  'ฉันชอบอ่านหนังสือเกี่ยวกับปัญญาประดิษฐ์',
  'การเดินทางช่วยเปิดโลกทัศน์ของเรา',
  'เทคโนโลยีกำลังเปลี่ยนแปลงวิถีชีวิตของเรา',
@@ -190,10 +188,28 @@ sentences_list = ['วันนี้อากาศดีมาก',
  'การเรียนรู้การออกแบบโมเดล AI เป็นเป้าหมายของฉัน',
  'ฉันกำลังศึกษาแนวทางใหม่ๆ ในการพัฒนา AI']
 
-
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def index():
-    grouped_sentences = group_similar_sentences(sentences_list, threshold=0.4)
+    default_threshold = 0.4
+
+    if request.method == 'POST':
+        user_sentences = request.form.get('sentences', '')
+        threshold = request.form.get('threshold', default_threshold, type=float)
+        
+        # Process sentences
+        sentences_list = [s.strip() for s in user_sentences.split('\n') if s.strip()]
+        
+        # Use default if no valid sentences
+        if not sentences_list:
+            sentences_list = default_sentences.copy()
+            user_sentences = '\n'.join(default_sentences)
+    else:
+        sentences_list = default_sentences.copy()
+        threshold = default_threshold
+        user_sentences = '\n'.join(default_sentences)
+
+    # Generate word cloud data
+    grouped_sentences = group_similar_sentences(sentences_list, threshold=threshold)
     counter = Counter()
     project_data = []
     for group in grouped_sentences:
@@ -202,8 +218,11 @@ def index():
     
     for text, count in counter.items():
         project_data.append({"text": text, "count": count})
-    # pprint(project_data)
-    return render_template("index.html", data=project_data)
+
+    return render_template("index.html", 
+                         data=project_data,
+                         sentences=user_sentences,
+                         threshold=threshold)
 
 if __name__ == "__main__":
     app.run(debug=True)
