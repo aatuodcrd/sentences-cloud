@@ -1,4 +1,3 @@
-from pprint import pprint
 from flask import Flask, render_template, request
 from collections import Counter
 from utils.similarity import group_similar_sentences
@@ -39,7 +38,6 @@ def index():
     match = re.search(r'</think>\s*(.*)', text, re.DOTALL)
     if match:
         extracted_text = eval(match.group(1).strip())
-        pprint(extracted_text)
         project_data = [{"text": a, "count": len(b)} for a, b in zip(extracted_text, grouped_sentences)]
     else:
         counter = Counter()
@@ -49,7 +47,6 @@ def index():
             counter[representative_text] = len(group)
         project_data = [{"text": text, "count": count} for text, count in counter.items()]
 
-    pprint(project_data)
     return render_template("index.html", data=project_data, sentences=user_sentences, threshold=threshold)
 
 if __name__ == "__main__":
